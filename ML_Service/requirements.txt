@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pandas
+numpy
+scikit-learn
+tensorflow
+joblib
+pyrenn
+shap
+openpyxl
+imbalanced-learn
+matplotlib
+pymongo
+
+
