@@ -3,7 +3,7 @@ uvicorn
 pandas
 numpy
 scikit-learn
-tensorflow==2.15.0
+tensorflow
 joblib
 pyrenn
 shap
