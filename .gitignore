@@ -7,4 +7,5 @@ uploads/
 dist/
 build/
 .DS_Store
-ML_Service/saved_models/
+ML_Service/saved_models/*
+!ML_Service/saved_models/.gitkeep
