@@ -103,6 +103,16 @@ const Dashboard = () => {
 
         {/* Industrial Modules Section */}
         <div className="industrial-modules">
+          <Link to="/mechanical" className="industrial-card analytics-card">
+            <div className="industrial-content">
+              <h2>Mechanical Analytics</h2>
+              <p>
+                Analyze the relationship between process parameters and
+                mechanical properties.
+              </p>
+            </div>
+          </Link>
+
           <Link to="/prognosis" className="industrial-card prognosis-card">
             <div className="industrial-content">
               <h2>Quality Prognosis</h2>

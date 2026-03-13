@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import IndustrialModules from "./pages/IndustrialModules";
 import Prognosis from "./pages/Prognosis";
 import Diagnosis from "./pages/Diagnosis";
+import MechanicalAnalysis from "./pages/MechanicalAnalysis";
 import Training from "./pages/Training";
 import Result from "./pages/Result";
 import UploadDataset from "./pages/UploadDataset";
@@ -54,6 +55,7 @@ const App = () => {
             <Route path="/prognosis" element={<Prognosis />} />
             <Route path="/training" element={<Training />} />
             <Route path="/analysis" element={<Diagnosis />} />
+            <Route path="/mechanical" element={<MechanicalAnalysis />} />
             <Route path="/result" element={<Result />} />
             <Route path="/upload-dataset" element={<UploadDataset />} />
             <Route path="/help" element={<Help />} />

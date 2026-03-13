@@ -2,14 +2,23 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Dict
 
+# =========================
+# IMPORT ML MODULES
+# =========================
+
 from model_utils import train_model, predict_single_sample
 from diagnosis_utils import run_diagnosis
+from mechanical_utils import run_mechanical_analysis
 
+
+# =========================
+# FASTAPI APP
+# =========================
 
 app = FastAPI(
     title="Quality Prognosis ML Service",
     description="Machine Learning Service for Training, Prediction, and Diagnosis",
-    version="1.0"
+    version="2.0"
 )
 
 
@@ -73,12 +82,32 @@ def predict(req: PredictionRequest):
 
 
 # =========================
-# DIAGNOSIS MODULE
+# DEFECT DIAGNOSIS MODULE
 # =========================
 
 @app.post("/diagnosis")
 def diagnosis(req: DiagnosisRequest):
     """
-    Diagnose critical parameters using Bayesian analysis
+    Diagnose critical parameters causing defects
+    using Bayesian probability analysis
     """
     return run_diagnosis(req.file_path)
+
+
+# =========================
+# MECHANICAL PROPERTY ANALYSIS
+# =========================
+
+@app.post("/mechanical")
+def mechanical_analysis(req: DiagnosisRequest):
+    """
+    Analyze critical parameters affecting
+    mechanical properties such as:
+    - Ultimate Tensile Strength (UTS)
+    - Yield Strength (YS)
+    - Elongation (ELOG)
+
+    Uses Bayesian probability analysis
+    similar to defect diagnosis.
+    """
+    return run_mechanical_analysis(req.file_path)
