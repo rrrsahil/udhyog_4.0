@@ -39,14 +39,15 @@ def compute_parameter_ranges(df, input_columns):
         min_val = df[col].min()
         max_val = df[col].max()
 
-        interval = (max_val - min_val) / 4
+        interval = (max_val - min_val) / 5
 
         r1 = (min_val, min_val + interval)
         r2 = (min_val + interval, min_val + 2 * interval)
         r3 = (min_val + 2 * interval, min_val + 3 * interval)
-        r4 = (min_val + 3 * interval, max_val)
+        r4 = (min_val + 3 * interval, min_val + 4 * interval)
+        r5 = (min_val + 4 * interval, max_val)
 
-        ranges[col] = [r1, r2, r3, r4]
+        ranges[col] = [r1, r2, r3, r4, r5]
 
     return ranges
 
