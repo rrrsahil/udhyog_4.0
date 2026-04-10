@@ -2,10 +2,8 @@ import pandas as pd
 import numpy as np
 import logging
 
-
 # ================= LOGGING =================
 logging.basicConfig(level=logging.INFO)
-
 
 # ================= LOAD DATASET =================
 def load_dataset(file_path):
@@ -64,40 +62,66 @@ def compute_local_probability(df, col, value_range):
     return count / len(df)
 
 
+# ================= PRIOR ODDS =================
+def compute_prior_odds(lp):
+
+    if lp == 1:
+        return 0
+
+    return lp / (1 - lp)
+
+
 # ================= JOINT PROBABILITY =================
 def compute_joint_probability(df, col, value_range, defect_col):
 
     low, high = value_range
 
-    subset = df[(df[col] >= low) & (df[col] <= high)]
-
-    defect_occurrence = subset[subset[defect_col] == 1]
+    subset = df[
+        (df[col] >= low) &
+        (df[col] <= high) &
+        (df[defect_col] == 1)
+    ]
 
     if len(df) == 0:
         return 0
 
-    return len(defect_occurrence) / len(df)
+    return len(subset) / len(df)
 
 
 # ================= CONDITIONAL PROBABILITY =================
-def compute_conditional_probability(df, col, value_range, defect_col):
+def compute_conditional_probability(df, col, value_range, defect_col, lp):
 
-    low, high = value_range
+    jp = compute_joint_probability(df, col, value_range, defect_col)
 
-    subset = df[(df[col] >= low) & (df[col] <= high)]
+    defect_total = df[df[defect_col] == 1].shape[0]
 
-    if len(subset) == 0:
+    if len(df) == 0 or lp == 0:
         return 0
 
-    defect_occurrence = subset[subset[defect_col] == 1]
+    p_defect = defect_total / len(df)
 
-    return len(defect_occurrence) / len(subset)
+    return (jp * p_defect) / lp
+
+
+# ================= LIKELIHOOD RATIO =================
+def compute_likelihood_ratio(cp):
+
+    if cp == 1:
+        return 0
+
+    return cp / (1 - cp)
+
+
+# ================= POSTERIOR ODDS =================
+def compute_posterior_odds(prior_odds, lr):
+
+    return prior_odds * lr
 
 
 # ================= POSTERIOR PROBABILITY =================
-def compute_posterior_probability(lp, cp):
+def compute_posterior_probability(posterior_odds):
 
-    return lp * cp
+    return posterior_odds / (1 + posterior_odds)
 
 
 # ================= SEVERITY LEVEL =================
@@ -116,6 +140,51 @@ def severity_level(prob):
         return "Very High"
 
 
+# ================= BUILD SEVERITY MATRIX =================
+def build_severity_matrix(results):
+
+    matrix = {}
+
+    for r in results:
+
+        param = r["parameter"]
+        defect = r["defect"]
+
+        if param not in matrix:
+            matrix[param] = {}
+
+        matrix[param][defect] = r["severity"]
+
+    return matrix
+
+
+# ================= DASHBOARD DATA =================
+def build_dashboard_data(results):
+
+    severity_counts = {
+        "Very Low": 0,
+        "Low": 0,
+        "High": 0,
+        "Very High": 0
+    }
+
+    for r in results:
+        severity_counts[r["severity"]] += 1
+
+    sorted_results = sorted(
+        results,
+        key=lambda x: x["posterior_probability"],
+        reverse=True
+    )
+
+    top_parameters = sorted_results[:10]
+
+    return {
+        "severity_distribution": severity_counts,
+        "top_parameters": top_parameters
+    }
+
+
 # ================= MAIN DIAGNOSIS FUNCTION =================
 def run_diagnosis(file_path):
 
@@ -126,12 +195,11 @@ def run_diagnosis(file_path):
     target_columns = df.columns[1:6]
     input_columns = df.columns[6:]
 
-    # Ensure numeric values for inputs
+    # Ensure numeric inputs
     df[input_columns] = df[input_columns].apply(
         pd.to_numeric, errors="coerce"
     ).fillna(0)
 
-    # Dataset summary
     dataset_summary = {
         "rows": len(df),
         "total_columns": len(df.columns),
@@ -141,7 +209,6 @@ def run_diagnosis(file_path):
 
     logging.info(f"Dataset Summary: {dataset_summary}")
 
-    # Compute ranges
     ranges = compute_parameter_ranges(df, input_columns)
 
     results = []
@@ -153,36 +220,48 @@ def run_diagnosis(file_path):
         for r in param_ranges:
 
             lp = compute_local_probability(df, param, r)
+            prior_odds = compute_prior_odds(lp)
 
             for defect in target_columns:
 
-                cp = compute_conditional_probability(df, param, r, defect)
-
-                posterior = compute_posterior_probability(lp, cp)
+                cp = compute_conditional_probability(df, param, r, defect, lp)
+                lr = compute_likelihood_ratio(cp)
+                post_odds = compute_posterior_odds(prior_odds, lr)
+                posterior = compute_posterior_probability(post_odds)
 
                 result = {
                     "parameter": param,
                     "range": f"{round(r[0],4)} - {round(r[1],4)}",
                     "defect": defect,
                     "local_probability": round(lp,4),
+                    "prior_odds": round(prior_odds,4),
                     "conditional_probability": round(cp,4),
+                    "likelihood_ratio": round(lr,4),
+                    "posterior_odds": round(post_odds,4),
                     "posterior_probability": round(posterior,4),
                     "severity": severity_level(posterior)
                 }
 
                 results.append(result)
 
-    # Detect critical parameters
+    # ================= CRITICAL PARAMETERS =================
     critical_parameters = [
         r for r in results
         if r["posterior_probability"] > 0.5
     ]
+
+    # ================= SEVERITY MATRIX =================
+    severity_matrix = build_severity_matrix(results)
+
+    # ================= DASHBOARD =================
+    dashboard_data = build_dashboard_data(results)
 
     logging.info(f"Diagnosis completed with {len(results)} results")
 
     return {
         "dataset_summary": dataset_summary,
         "diagnosis_results": results,
-        "critical_parameters": critical_parameters
+        "critical_parameters": critical_parameters,
+        "severity_matrix": severity_matrix,
+        "dashboard_data": dashboard_data
     }
-

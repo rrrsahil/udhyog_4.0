@@ -47,7 +47,7 @@ const Diagnosis = () => {
         datasetId: selectedDataset,
       });
 
-      setAnalysisResult(res.data.result);
+      setAnalysisResult(res.data);
     } catch (err) {
       console.error(err);
       alert("Analysis failed");
@@ -70,22 +70,14 @@ const Diagnosis = () => {
     },
   };
 
-  /* Severity Distribution */
-
-  const severityCounts = {
+/* Severity Distribution */
+const severityCounts =
+  analysisResult?.dashboard?.severity_distribution || {
     "Very Low": 0,
     Low: 0,
     High: 0,
     "Very High": 0,
   };
-
-  if (analysisResult?.diagnosis_results) {
-    analysisResult.diagnosis_results.forEach((item) => {
-      if (severityCounts[item.severity] !== undefined) {
-        severityCounts[item.severity]++;
-      }
-    });
-  }
 
   const severityChartData = {
     labels: Object.keys(severityCounts),
@@ -99,14 +91,7 @@ const Diagnosis = () => {
   };
 
   /* Top Critical Parameters */
-
-  let topParameters = [];
-
-  if (analysisResult?.diagnosis_results) {
-    topParameters = [...analysisResult.diagnosis_results]
-      .sort((a, b) => b.posterior_probability - a.posterior_probability)
-      .slice(0, 10);
-  }
+const topParameters = analysisResult?.dashboard?.top_parameters || [];
 
   const criticalChartData = {
     labels: topParameters.map((p) => p.parameter),
@@ -120,22 +105,12 @@ const Diagnosis = () => {
   };
 
   /* Heatmap */
+// 🔥 UPDATED: use backend severity matrix
+const heatmapData = analysisResult?.severityMatrix || {};
 
-  const heatmapData = {};
-
-  if (analysisResult?.diagnosis_results) {
-    analysisResult.diagnosis_results.forEach((row) => {
-      if (!heatmapData[row.parameter]) {
-        heatmapData[row.parameter] = {};
-      }
-
-      heatmapData[row.parameter][row.defect] = row.severity;
-    });
-  }
-
-  const defectTypes = analysisResult?.diagnosis_results
-    ? [...new Set(analysisResult.diagnosis_results.map((r) => r.defect))]
-    : [];
+  const defectTypes = analysisResult?.results
+  ? [...new Set(analysisResult.results.map((r) => r.defect))]
+  : [];
 
   const severityColor = (severity) => {
     switch (severity) {
@@ -154,12 +129,12 @@ const Diagnosis = () => {
 
   /* Range Recommendation */
 
-  let recommendations = [];
+  const recommendations = [];
 
-  if (analysisResult?.diagnosis_results) {
+  if (analysisResult?.results) {
     const grouped = {};
 
-    analysisResult.diagnosis_results.forEach((row) => {
+    analysisResult.results.forEach((row) => {
       if (!grouped[row.parameter]) {
         grouped[row.parameter] = [];
       }
@@ -191,14 +166,9 @@ const Diagnosis = () => {
 
     doc.text("Dataset Summary", 20, 35);
 
-    doc.text(`Rows: ${analysisResult.dataset_summary.rows}`, 20, 45);
-    doc.text(
-      `Parameters: ${analysisResult.dataset_summary.input_parameters}`,
-      20,
-      52,
-    );
-    doc.text(`Defects: ${analysisResult.dataset_summary.defect_types}`, 20, 59);
-
+    doc.text(`Rows: ${analysisResult.summary.rows}`, 20, 45);
+    doc.text(`Parameters: ${analysisResult.summary.input_parameters}`, 20, 52);
+    doc.text(`Defects: ${analysisResult.summary.defect_types}`, 20, 59);
     doc.text("Recommended Parameter Ranges", 20, 75);
 
     let y = 85;
@@ -259,24 +229,24 @@ const Diagnosis = () => {
 
       {/* SUMMARY */}
 
-      {analysisResult?.dataset_summary && (
+      {analysisResult?.summary && (
         <div className="card mt-3">
           <h3>Dataset Summary</h3>
 
           <div className="row">
             <div className="col">
               <strong>Total Rows</strong>
-              <p>{analysisResult.dataset_summary.rows}</p>
+              <p>{analysisResult.summary.rows}</p>
             </div>
 
             <div className="col">
               <strong>Input Parameters</strong>
-              <p>{analysisResult.dataset_summary.input_parameters}</p>
+              <p>{analysisResult.summary.input_parameters}</p>
             </div>
 
             <div className="col">
               <strong>Defect Types</strong>
-              <p>{analysisResult.dataset_summary.defect_types}</p>
+              <p>{analysisResult.summary.defect_types}</p>
             </div>
           </div>
         </div>
@@ -284,7 +254,7 @@ const Diagnosis = () => {
 
       {/* CHARTS */}
 
-      {analysisResult?.diagnosis_results && (
+      {analysisResult?.results && (
         <div className="row mt-3">
           <div className="col">
             <div className="card">
@@ -313,7 +283,7 @@ const Diagnosis = () => {
 
       {/* HEATMAP */}
 
-      {analysisResult?.diagnosis_results && (
+      {analysisResult?.results && (
         <div className="card mt-3">
           <h3>Parameter vs Defect Heatmap</h3>
 
@@ -335,7 +305,7 @@ const Diagnosis = () => {
                     <td>{param}</td>
 
                     {defectTypes.map((def) => {
-                      const severity = heatmapData[param][def];
+                      const severity = heatmapData[param]?.[def];
 
                       return (
                         <td
