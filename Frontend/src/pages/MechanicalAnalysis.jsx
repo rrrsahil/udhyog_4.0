@@ -315,7 +315,7 @@ const MechanicalAnalysis = () => {
         </button>
       </div>
 
-      {analysisResult?.results && (
+      {analysisResult?.results?.length > 0 && (
         <div className="row mt-3">
           <div className="col">
             <div className="card">
@@ -339,7 +339,7 @@ const MechanicalAnalysis = () => {
         </div>
       )}
 
-      {analysisResult?.results && (
+      {analysisResult?.results?.length > 0 && (
         <div className="card mt-3">
           <h3>Top Influencing Parameters</h3>
 
@@ -349,7 +349,7 @@ const MechanicalAnalysis = () => {
         </div>
       )}
 
-      {analysisResult?.results && (
+      {analysisResult?.results?.length > 0 && (
         <div className="card mt-3">
           <h3>Parameter vs Mechanical Property Heatmap</h3>
 
@@ -371,7 +371,7 @@ const MechanicalAnalysis = () => {
                     <td>{param}</td>
 
                     {properties.map((prop) => {
-                      const sev = heatmapData[param][prop];
+                      const sev = heatmapData[param]?.[prop];
 
                       return (
                         <td

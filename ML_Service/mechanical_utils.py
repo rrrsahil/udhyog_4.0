@@ -30,15 +30,15 @@ def compute_ranges(series):
     min_val = series.min()
     max_val = series.max()
 
-    interval = (max_val - min_val) / 4
+    interval = (max_val - min_val) / 5
 
     r1 = (min_val, min_val + interval)
     r2 = (min_val + interval, min_val + 2 * interval)
     r3 = (min_val + 2 * interval, min_val + 3 * interval)
-    r4 = (min_val + 3 * interval, max_val)
+    r4 = (min_val + 3 * interval, min_val + 4 * interval)
+    r5 = (min_val + 4 * interval, max_val)
 
-    return [r1, r2, r3, r4]
-
+    return [r1, r2, r3, r4, r5]
 
 # ======================================
 # LOCAL PROBABILITY

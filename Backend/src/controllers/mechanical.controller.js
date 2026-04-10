@@ -72,11 +72,13 @@ export const runMechanicalAnalysis = async (req, res) => {
       dashboard: pythonResult.dashboard_data,
     });
   } catch (error) {
-    console.error("Mechanical Analysis Error:", error.message);
 
-    return res.status(500).json({
-      message: "Mechanical analysis failed",
-      error: error.message,
-    });
-  }
+  console.error("Mechanical Analysis Error:", error);
+
+  return res.status(500).json({
+    message: "Mechanical analysis failed",
+    error: error.response?.data || error.message
+  });
+
+}
 };
