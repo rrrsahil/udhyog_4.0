@@ -25,8 +25,18 @@ export const predictQuality = async (req, res) => {
       });
     }
 
+    // ✅ ADD THIS (same pattern everywhere)
+    const ML_BASE_URL = process.env.ML_SERVICE_URL;
+
+    // ✅ ADD THIS CHECK
+    if (!ML_BASE_URL) {
+      return res.status(500).json({
+        message: "ML service URL not configured in .env",
+      });
+    }
+
     const response = await axios.post(
-      "http://127.0.0.1:8001/predict",
+      `${ML_BASE_URL}/predict`,
       { sample: inputs },
       {
         timeout: 30000,
@@ -54,7 +64,7 @@ export const predictQuality = async (req, res) => {
 
     return res.status(500).json({
       message: "Prediction failed",
-      error: error.message,
+      error: error.response?.data || error.message,
     });
   }
 };

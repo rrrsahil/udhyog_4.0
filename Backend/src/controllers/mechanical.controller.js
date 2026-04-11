@@ -28,11 +28,21 @@ export const runMechanicalAnalysis = async (req, res) => {
       });
     }
 
+    // ✅ ADD THIS (same as previous controller)
+    const ML_BASE_URL = process.env.ML_SERVICE_URL;
+
+    // ✅ ADD THIS CHECK
+    if (!ML_BASE_URL) {
+      return res.status(500).json({
+        message: "ML service URL not configured in .env",
+      });
+    }
+
     /* ===============================
        CALL PYTHON ML SERVICE
     =============================== */
     const response = await axios.post(
-      "http://127.0.0.1:8001/mechanical",
+      `${ML_BASE_URL}/mechanical`,
       {
         file_path: dataset.filePath,
       },

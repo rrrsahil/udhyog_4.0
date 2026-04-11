@@ -28,11 +28,18 @@ export const runDiagnosis = async (req, res) => {
       });
     }
 
+    const ML_BASE_URL = process.env.ML_SERVICE_URL;
+
+    if (!ML_BASE_URL) {
+      return res.status(500).json({
+        message: "ML service URL not configured in .env",
+      });
+    }
     /* ===============================
        CALL PYTHON ML SERVICE
     =============================== */
     const response = await axios.post(
-      "http://127.0.0.1:8001/diagnosis",
+      `${ML_BASE_URL}/diagnosis`,
       {
         file_path: dataset.filePath,
       },

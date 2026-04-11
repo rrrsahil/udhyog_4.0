@@ -54,8 +54,16 @@ export const startTraining = async (req, res) => {
       training_id: training._id.toString(),
     };
 
+    const ML_BASE_URL = process.env.ML_SERVICE_URL;
+
+    if (!ML_BASE_URL) {
+      return res.status(500).json({
+        message: "ML service URL not configured in .env",
+      });
+    }
+
     const response = await axios.post(
-      "http://127.0.0.1:8001/train",
+      `${ML_BASE_URL}/train`,
       pythonPayload,
       {
         timeout: 600000,
