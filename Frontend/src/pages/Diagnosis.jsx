@@ -21,6 +21,13 @@ const Diagnosis = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // 🔥 NEW STATES
+  const [, setColumns] = useState([]);
+  const [inputColumns, setInputColumns] = useState([]);
+  const [targetColumns, setTargetColumns] = useState([]);
+  const [selectedInputs, setSelectedInputs] = useState([]);
+  const [selectedTargets, setSelectedTargets] = useState([]);
+
   useEffect(() => {
     loadDatasets();
   }, []);
@@ -34,6 +41,43 @@ const Diagnosis = () => {
     }
   };
 
+  // 🔥 HANDLE DATASET CHANGE
+  const handleDatasetChange = (datasetId) => {
+    setSelectedDataset(datasetId);
+    setAnalysisResult(null);
+
+    const ds = datasets.find((d) => d._id === datasetId);
+    if (!ds || !ds.columns) return;
+
+    const cols = ds.columns;
+    setColumns(cols);
+
+    const targets = cols.slice(1, 6);
+    const inputs = cols.slice(6);
+
+    setInputColumns(inputs);
+    setTargetColumns(targets);
+
+    setSelectedInputs(inputs);
+    setSelectedTargets(targets);
+  };
+
+  const toggleInput = (col) => {
+    setSelectedInputs((prev) =>
+      prev.includes(col)
+        ? prev.filter((c) => c !== col)
+        : [...prev, col]
+    );
+  };
+
+  const toggleTarget = (col) => {
+    setSelectedTargets((prev) =>
+      prev.includes(col)
+        ? prev.filter((c) => c !== col)
+        : [...prev, col]
+    );
+  };
+
   const runAnalysis = async () => {
     if (!selectedDataset) {
       alert("Please select dataset");
@@ -45,6 +89,8 @@ const Diagnosis = () => {
 
       const res = await API.post("/analysis/run", {
         datasetId: selectedDataset,
+        inputColumns: selectedInputs,
+        targetColumns: selectedTargets,
       });
 
       setAnalysisResult(res.data);
@@ -70,14 +116,13 @@ const Diagnosis = () => {
     },
   };
 
-/* Severity Distribution */
-const severityCounts =
-  analysisResult?.dashboard?.severity_distribution || {
-    "Very Low": 0,
-    Low: 0,
-    High: 0,
-    "Very High": 0,
-  };
+  const severityCounts =
+    analysisResult?.dashboard?.severity_distribution || {
+      "Very Low": 0,
+      Low: 0,
+      High: 0,
+      "Very High": 0,
+    };
 
   const severityChartData = {
     labels: Object.keys(severityCounts),
@@ -90,27 +135,38 @@ const severityCounts =
     ],
   };
 
-  /* Top Critical Parameters */
-const topParameters = analysisResult?.dashboard?.top_parameters || [];
+  const topParameters = analysisResult?.dashboard?.top_parameters || [];
 
-  const criticalChartData = {
-    labels: topParameters.map((p) => p.parameter),
-    datasets: [
-      {
-        label: "Posterior Probability",
-        data: topParameters.map((p) => p.posterior_probability),
-        backgroundColor: "#2845D6",
-      },
-    ],
-  };
+const barColors = [
+  "#0ea5e9",
+  "#6366f1",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#14b8a6",
+  "#a855f7",
+  "#f97316",
+  "#10b981",
+  "#3b82f6",
+];
 
-  /* Heatmap */
-// 🔥 UPDATED: use backend severity matrix
-const heatmapData = analysisResult?.severityMatrix || {};
+const criticalChartData = {
+  labels: topParameters.map((p) => p.parameter),
+  datasets: [
+    {
+      label: "Posterior Probability",
+      data: topParameters.map((p) => p.posterior_probability),
 
-  const defectTypes = analysisResult?.results
-  ? [...new Set(analysisResult.results.map((r) => r.defect))]
-  : [];
+      backgroundColor: topParameters.map(
+        (_, i) => barColors[i % barColors.length]
+      ),
+    },
+  ],
+};
+
+  const heatmapData = analysisResult?.severityMatrix || {};
+
+  const defectTypes = selectedTargets;
 
   const severityColor = (severity) => {
     switch (severity) {
@@ -127,8 +183,6 @@ const heatmapData = analysisResult?.severityMatrix || {};
     }
   };
 
-  /* Range Recommendation */
-
   const recommendations = [];
 
   if (analysisResult?.results) {
@@ -138,13 +192,12 @@ const heatmapData = analysisResult?.severityMatrix || {};
       if (!grouped[row.parameter]) {
         grouped[row.parameter] = [];
       }
-
       grouped[row.parameter].push(row);
     });
 
     Object.keys(grouped).forEach((param) => {
       const best = grouped[param].sort(
-        (a, b) => a.posterior_probability - b.posterior_probability,
+        (a, b) => a.posterior_probability - b.posterior_probability
       )[0];
 
       recommendations.push({
@@ -154,8 +207,6 @@ const heatmapData = analysisResult?.severityMatrix || {};
     });
   }
 
-  /* PROFESSIONAL PDF */
-
   const downloadReport = () => {
     const doc = new jsPDF();
 
@@ -164,25 +215,14 @@ const heatmapData = analysisResult?.severityMatrix || {};
 
     doc.setFontSize(12);
 
-    doc.text("Dataset Summary", 20, 35);
+    doc.text(`Rows: ${analysisResult.summary.rows}`, 20, 40);
 
-    doc.text(`Rows: ${analysisResult.summary.rows}`, 20, 45);
-    doc.text(`Parameters: ${analysisResult.summary.input_parameters}`, 20, 52);
-    doc.text(`Defects: ${analysisResult.summary.defect_types}`, 20, 59);
-    doc.text("Recommended Parameter Ranges", 20, 75);
-
-    let y = 85;
+    let y = 60;
 
     recommendations.forEach((rec) => {
       doc.text(`${rec.parameter}`, 20, y);
       doc.text(`${rec.optimalRange}`, 120, y);
-
       y += 7;
-
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
     });
 
     doc.save("Diagnosis_Report.pdf");
@@ -201,16 +241,14 @@ const heatmapData = analysisResult?.severityMatrix || {};
       </div>
 
       {/* DATASET SELECT */}
-
       <div className="card">
         <h3>Select Dataset</h3>
 
         <select
           value={selectedDataset}
-          onChange={(e) => setSelectedDataset(e.target.value)}
+          onChange={(e) => handleDatasetChange(e.target.value)}
         >
           <option value="">Choose dataset</option>
-
           {datasets.map((ds) => (
             <option key={ds._id} value={ds._id}>
               {ds.fileName}
@@ -218,14 +256,50 @@ const heatmapData = analysisResult?.severityMatrix || {};
           ))}
         </select>
 
-        <button
-          onClick={runAnalysis}
-          className="btn-primary"
-          style={{ marginTop: "10px" }}
-        >
-          {loading ? "Running Analysis..." : "Run Data Analysis"}
+        <button onClick={runAnalysis} className="btn-primary">
+          {loading ? "Running..." : "Run Data Analysis"}
         </button>
       </div>
+
+      {/* 🔥 INPUT SELECTION */}
+      {inputColumns.length > 0 && (
+        <div className="card mt-3">
+          <h3>Select Input Parameters</h3>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+            {inputColumns.map((col) => (
+              <label key={col}>
+                <input
+                  type="checkbox"
+                  checked={selectedInputs.includes(col)}
+                  onChange={() => toggleInput(col)}
+                />
+                {col}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 DEFECT SELECTION */}
+      {targetColumns.length > 0 && (
+        <div className="card mt-3">
+          <h3>Select Defect Types</h3>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+            {targetColumns.map((col) => (
+              <label key={col}>
+                <input
+                  type="checkbox"
+                  checked={selectedTargets.includes(col)}
+                  onChange={() => toggleTarget(col)}
+                />
+                {col}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* SUMMARY */}
 

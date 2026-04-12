@@ -37,12 +37,6 @@ const Header = () => {
           </li>
 
           <li>
-            <NavLink to="/prognosis" onClick={() => setMenuOpen(false)}>
-              Prognosis
-            </NavLink>
-          </li>
-
-          <li>
             <NavLink to="/help" onClick={() => setMenuOpen(false)}>
               Help
             </NavLink>

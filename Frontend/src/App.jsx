@@ -4,11 +4,13 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+//Authorization Pages 
 import Login from "./pages/Login";
 import ForgetPassword from "./pages/ForgetPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Register from "./pages/Register";
 
+// Main Pages
 import Dashboard from "./pages/Dashboard";
 import IndustrialModules from "./pages/IndustrialModules";
 import Prognosis from "./pages/Prognosis";
@@ -19,13 +21,17 @@ import Result from "./pages/Result";
 import UploadDataset from "./pages/UploadDataset";
 import Help from "./pages/Help";
 import ProtectedRoute from "./components/ProtectedRoute";
-import MainLayout from "./components/MainLayout";
+import PropertyPrognosis from "./pages/PropertyPrognosis";
 
+// Components and Layout
+import MainLayout from "./components/MainLayout";
 import ScrollTopButton from "./components/ScrollTopButton";
 import ScrollToTop from "./components/ScrollToTop";
 
+// Not Found Page
 import NotFound from "./components/NotFound";
 
+// Styles
 import "./css/style.css";
 import "./css/login.css";
 import "./css/dashboard.css";
@@ -51,11 +57,11 @@ const App = () => {
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-
-            <Route path="/prognosis" element={<Prognosis />} />
             <Route path="/training" element={<Training />} />
+            <Route path="/prognosis" element={<Prognosis />} />
             <Route path="/analysis" element={<Diagnosis />} />
             <Route path="/mechanical" element={<MechanicalAnalysis />} />
+            <Route path="/property-prognosis" element={<PropertyPrognosis />} />
             <Route path="/result" element={<Result />} />
             <Route path="/upload-dataset" element={<UploadDataset />} />
             <Route path="/help" element={<Help />} />

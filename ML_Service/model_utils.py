@@ -24,6 +24,9 @@ from sklearn.neural_network import MLPClassifier
 
 MODEL_DIR = "saved_models"
 os.makedirs(MODEL_DIR, exist_ok=True)
+# ================= GLOBAL MODEL CACHE =================
+global_model = None
+model_loaded = False
 
 
 # ================= PROGRESS CALLBACK =================
@@ -257,6 +260,11 @@ def train_model(req):
 
     except Exception as e:
         shap_summary = {"error": str(e)}
+    
+    # ================= GLOBAL MODEL CACHE =================
+    global global_model, model_loaded
+    global_model = None
+    model_loaded = False
 
     return {
         "accuracy": overall_accuracy,
@@ -272,15 +280,40 @@ def train_model(req):
         "algorithm": req.algorithm
     }
 
+# ================= LOAD MODEL FROM DISK =================
+def load_model_from_disk():
+    global global_model, model_loaded
+
+    try:
+        algo = joblib.load(os.path.join(MODEL_DIR, "algo.pkl"))
+
+        if algo == "Quasi-Newton (L-BFGS)":
+            global_model = joblib.load(os.path.join(MODEL_DIR, "lbfgs_model.pkl"))
+        else:
+            global_model = tf.keras.models.load_model(
+                os.path.join(MODEL_DIR, "tf_model.h5")
+            )
+
+        model_loaded = True
+        print("✅ Model loaded into memory")
+
+    except Exception as e:
+        print("❌ Model loading failed:", e)
+        global_model = None
+        model_loaded = False
 
 # ================= PREDICT =================
 def predict_single_sample(sample_dict):
 
+    global global_model, model_loaded
+
+    # ================= LOAD PREPROCESSING =================
     scaler = joblib.load(os.path.join(MODEL_DIR, "scaler.pkl"))
     features = joblib.load(os.path.join(MODEL_DIR, "features.pkl"))
     targets = joblib.load(os.path.join(MODEL_DIR, "targets.pkl"))
     algo = joblib.load(os.path.join(MODEL_DIR, "algo.pkl"))
 
+    # ================= PREPARE INPUT =================
     input_df = pd.DataFrame([sample_dict])
     input_df = input_df.apply(pd.to_numeric, errors="coerce").fillna(0)
 
@@ -291,19 +324,36 @@ def predict_single_sample(sample_dict):
     input_df = input_df[features]
     input_scaled = scaler.transform(input_df)
 
+    # ================= LOAD MODEL (ONLY ONCE) =================
+    if not model_loaded or global_model is None:
+        print("⚠️ Model not loaded, loading now...")
+        load_model_from_disk()
+
+    if global_model is None:
+        raise Exception("Model not available for prediction")
+
+    # ================= PREDICT =================
     if algo == "Quasi-Newton (L-BFGS)":
-        model = joblib.load(os.path.join(MODEL_DIR, "lbfgs_model.pkl"))
-        raw_pred = model.predict_proba(input_scaled)
+        raw_pred = global_model.predict_proba(input_scaled)
         probabilities = raw_pred[0]
     else:
-        model = tf.keras.models.load_model(os.path.join(MODEL_DIR, "tf_model.h5"))
-        raw_pred = model.predict(input_scaled)
+        raw_pred = global_model.predict(input_scaled)
         probabilities = raw_pred[0]
 
+    # ================= BUILD RESULT =================
     result = {}
 
     for i, target in enumerate(targets):
-        prob = float(probabilities[i])
+        # ================= SAFE PROBABILITY EXTRACTION =================
+        try:
+            prob = float(probabilities[i])
+        except:
+            prob = 0.0
+
+        # fallback if NaN or invalid
+        if np.isnan(prob) or prob < 0:
+            prob = 0.0
+
         result[target] = {
             "probability_percent": round(prob * 100, 2),
             "prediction": int(prob > 0.5),
@@ -317,6 +367,3 @@ def predict_single_sample(sample_dict):
     return {
         "prediction_results": result
     }
-
-    # $env:TF_ENABLE_ONEDNN_OPTS=0
-    # python -m uvicorn main:app --reload --port 8001

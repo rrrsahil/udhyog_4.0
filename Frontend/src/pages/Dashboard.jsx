@@ -71,7 +71,7 @@ const Dashboard = () => {
         </div>
 
         {/* Action Cards */}
-        {/* <div className="dashboard-actions">
+        <div className="dashboard-actions">
           <Link to="/upload-dataset" className="action-card">
             <div className="action-icon">
               <i className="fas fa-cloud-upload-alt" />
@@ -90,47 +90,50 @@ const Dashboard = () => {
               Configure and train your neural network model
             </p>
           </Link>
-          <Link to="/prognosis" className="action-card secondary">
-            <div className="action-icon">
-              <i className="fas fa-brain" />
-            </div>
-            <h3 className="action-title">Make Prognosis</h3>
-            <p className="action-description">
-              Get quality predictions based on your data
-            </p>
-          </Link>
-        </div> */}
+        </div>
 
         {/* Industrial Modules Section */}
         <div className="industrial-modules">
-          <Link to="/mechanical" className="industrial-card analytics-card">
-            <div className="industrial-content">
-              <h2>Mechanical Analytics</h2>
-              <p>
-                Analyze the relationship between process parameters and
-                mechanical properties.
-              </p>
-            </div>
-          </Link>
-
           <Link to="/prognosis" className="industrial-card prognosis-card">
             <div className="industrial-content">
-              <h2>Quality Prognosis</h2>
-              <p>
-                Quality prognosis is the solution for deeper trending and
-                predictive analytics to bring the future into focus.
-              </p>
+              <h2>
+                {" "}
+                <i className="fas fa-brain" /> Defect Prog.
+              </h2>
+              <p>Predict defect probabilities using AI models</p>
             </div>
           </Link>
 
-          <Link to="/analysis" className="industrial-card analytics-card">
+          <Link
+            to="/property-prognosis"
+            className="industrial-card analytics-card"
+          >
             <div className="industrial-content">
-              <h2>Data Analytics</h2>
-              <p>
-                Data Analytics is the solution for identification of critical
-                parameters and their specific range of values to achieve desired
-                quality.
-              </p>
+              <h2>
+                {" "}
+                <i className="fas fa-cogs" /> Property Prog.
+              </h2>
+              <p>Predict mechanical properties dynamically</p>
+            </div>
+          </Link>
+
+          <Link to="/analysis" className="industrial-card prognosis-card">
+            <div className="industrial-content">
+              <h2>
+                {" "}
+                <i className="fas fa-search" /> Defect Diag.
+              </h2>
+              <p>Find root causes of defects</p>
+            </div>
+          </Link>
+
+          <Link to="/mechanical" className="industrial-card analytics-card">
+            <div className="industrial-content">
+              <h2>
+                {" "}
+                <i className="fas fa-wrench" /> Mechanical Diag.
+              </h2>
+              <p>Analyze mechanical property behavior</p>
             </div>
           </Link>
         </div>
@@ -147,6 +150,7 @@ const Dashboard = () => {
               <tr>
                 <th>Date</th>
                 <th>Model</th>
+                <th>Type</th>
                 <th>Prediction</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -154,21 +158,35 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {recentPredictions.map((item) => {
-                const defectEntries = Object.entries(
-                  item.prediction_results || {},
-                );
-                const highestDefect = defectEntries.reduce(
-                  (max, current) =>
-                    Number(current[1]?.probability_percent) >
-                    Number(max?.[1]?.probability_percent || 0)
-                      ? current
-                      : max,
-                  null,
-                );
+                let overallProbability = 0;
 
-                const overallProbability = highestDefect
-                  ? Number(highestDefect[1]?.probability_percent || 0)
-                  : 0;
+                if (item.type === "defect") {
+                  const defectEntries = Object.entries(
+                    item.prediction_results || {},
+                  );
+
+                  const highestDefect = defectEntries.reduce(
+                    (max, current) =>
+                      Number(current[1]?.probability_percent) >
+                      Number(max?.[1]?.probability_percent || 0)
+                        ? current
+                        : max,
+                    null,
+                  );
+
+                  overallProbability = highestDefect
+                    ? Number(highestDefect[1]?.probability_percent || 0)
+                    : 0;
+                } else {
+                  // PROPERTY MODE
+                  const values = Object.values(item.prediction_results || {});
+
+                  overallProbability =
+                    values.length > 0
+                      ? values.reduce((a, b) => a + Number(b), 0) /
+                        values.length
+                      : 0;
+                }
 
                 const risk =
                   overallProbability > 70
@@ -190,6 +208,21 @@ const Dashboard = () => {
 
                     <td>{item.modelUsed}</td>
 
+                    <td>
+                      <span
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: "20px",
+                          background:
+                            item.type === "defect" ? "#fee2e2" : "#dbeafe",
+                          color: item.type === "defect" ? "#b91c1c" : "#1d4ed8",
+                          fontWeight: 600,
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        {item.type === "defect" ? "Defect" : "Property"}
+                      </span>
+                    </td>
                     <td>{overallProbability.toFixed(2)}%</td>
 
                     <td>

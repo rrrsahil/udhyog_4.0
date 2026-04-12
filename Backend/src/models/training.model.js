@@ -21,6 +21,14 @@ const trainingSchema = new mongoose.Schema(
       default: "running",
     },
     progress: { type: Number, default: 0 },
+    inputColumns: {
+      type: [String],
+      default: [],
+    },
+    targetColumns: {
+      type: [String],
+      default: [],
+    },
     accuracy: Number,
     targets: [String],
     weights_bias: mongoose.Schema.Types.Mixed,

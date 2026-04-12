@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import API from "../api/api";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
-
 import { Bar } from "react-chartjs-2";
 
 import {
@@ -22,6 +21,13 @@ const MechanicalAnalysis = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const [columns, setColumns] = useState([]);
+  const [inputColumns, setInputColumns] = useState([]);
+  const [targetColumns, setTargetColumns] = useState([]);
+
+  const [selectedInputs, setSelectedInputs] = useState([]);
+  const [selectedTargets, setSelectedTargets] = useState([]);
+
   useEffect(() => {
     loadDatasets();
   }, []);
@@ -35,6 +41,54 @@ const MechanicalAnalysis = () => {
     }
   };
 
+  /* =========================
+     DATASET SELECT
+  ========================= */
+  const handleDatasetChange = (datasetId) => {
+    setSelectedDataset(datasetId);
+    setAnalysisResult(null);
+
+    const ds = datasets.find((d) => d._id === datasetId);
+
+    if (!ds || !ds.columns) return;
+
+    const cols = ds.columns;
+
+    setColumns(cols);
+
+    const targets = cols.filter((col) =>
+      ["UTS", "YS", "ELOG", "Hardness", "RA"].includes(col),
+    );
+
+    const inputs = cols.filter(
+      (col) => !targets.includes(col) && col !== cols[0],
+    );
+
+    setInputColumns(inputs);
+    setTargetColumns(targets);
+
+    setSelectedInputs(inputs);
+    setSelectedTargets(targets);
+  };
+
+  /* =========================
+     TOGGLE FUNCTIONS
+  ========================= */
+  const toggleInput = (col) => {
+    setSelectedInputs((prev) =>
+      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col],
+    );
+  };
+
+  const toggleTarget = (col) => {
+    setSelectedTargets((prev) =>
+      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col],
+    );
+  };
+
+  /* =========================
+     RUN ANALYSIS
+  ========================= */
   const runAnalysis = async () => {
     if (!selectedDataset) {
       alert("Please select dataset");
@@ -46,6 +100,8 @@ const MechanicalAnalysis = () => {
 
       const res = await API.post("/mechanical/run", {
         datasetId: selectedDataset,
+        inputColumns: selectedInputs,
+        targetColumns: selectedTargets,
       });
 
       setAnalysisResult(res.data);
@@ -60,7 +116,6 @@ const MechanicalAnalysis = () => {
   /* =========================
      SEVERITY DISTRIBUTION
   ========================= */
-
   const severityCounts = {
     "Very Low": 0,
     Low: 0,
@@ -78,7 +133,6 @@ const MechanicalAnalysis = () => {
 
   const severityChartData = {
     labels: Object.keys(severityCounts),
-
     datasets: [
       {
         label: "Severity Distribution",
@@ -89,9 +143,45 @@ const MechanicalAnalysis = () => {
   };
 
   /* =========================
-     TOP INFLUENCING PARAMETERS
+     PROPERTY DISTRIBUTION (DYNAMIC)
   ========================= */
+  const propertyCount = {};
 
+  if (analysisResult?.results) {
+    analysisResult.results.forEach((r) => {
+      if (!propertyCount[r.property]) {
+        propertyCount[r.property] = 0;
+      }
+      propertyCount[r.property]++;
+    });
+  }
+
+const colors = [
+  "#0ea5e9", // blue
+  "#6366f1", // indigo
+  "#22c55e", // green
+  "#f59e0b", // orange
+  "#ef4444", // red
+  "#14b8a6", // teal (extra safety)
+];
+
+const propertyChart = {
+  labels: Object.keys(propertyCount),
+  datasets: [
+    {
+      label: "Mechanical Property Distribution",
+      data: Object.values(propertyCount),
+
+      backgroundColor: Object.keys(propertyCount).map(
+        (_, i) => colors[i % colors.length]
+      ),
+    },
+  ],
+};
+
+  /* =========================
+     TOP PARAMETERS
+  ========================= */
   let topParameters = [];
 
   if (analysisResult?.results) {
@@ -107,90 +197,45 @@ const MechanicalAnalysis = () => {
       }
     });
 
-    const paramArray = Object.keys(paramMap).map((param) => ({
-      parameter: param,
-      posterior_probability: paramMap[param],
-    }));
-
-    topParameters = paramArray
+    topParameters = Object.keys(paramMap)
+      .map((p) => ({
+        parameter: p,
+        posterior_probability: paramMap[p],
+      }))
       .sort((a, b) => b.posterior_probability - a.posterior_probability)
       .slice(0, 10);
   }
 
-  const topParamChart = {
-    labels: topParameters.map((p) => p.parameter),
+const barColors = [
+  "#0ea5e9",
+  "#6366f1",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#14b8a6",
+  "#a855f7",
+  "#f97316",
+  "#10b981",
+  "#3b82f6",
+];
 
-    datasets: [
-      {
-        label: "Posterior Probability",
-        data: topParameters.map((p) => p.posterior_probability),
-        backgroundColor: "#2845D6",
-      },
-    ],
-  };
+const topParamChart = {
+  labels: topParameters.map((p) => p.parameter),
+  datasets: [
+    {
+      label: "Posterior Probability",
+      data: topParameters.map((p) => p.posterior_probability),
 
-  const chartOptions = {
-    indexAxis: "y",
-    responsive: true,
-    maintainAspectRatio: false,
-
-    plugins: {
-      legend: { display: true },
+      backgroundColor: topParameters.map(
+        (_, i) => barColors[i % barColors.length]
+      ),
     },
-
-    scales: {
-      x: {
-        beginAtZero: true,
-        title: { display: true, text: "Posterior Probability" },
-      },
-      y: {
-        title: { display: true, text: "Process Parameters" },
-      },
-    },
-  };
+  ],
+};
 
   /* =========================
-     MECHANICAL PROPERTY DISTRIBUTION
+     HEATMAP
   ========================= */
-
-  const propertyCount = {
-    UTS: 0,
-    YS: 0,
-    ELOG: 0,
-    Hardness: 0,
-    RA: 0,
-  };
-
-  if (analysisResult?.results) {
-    analysisResult.results.forEach((r) => {
-      if (propertyCount[r.property] !== undefined) {
-        propertyCount[r.property]++;
-      }
-    });
-  }
-
-  const propertyChart = {
-    labels: Object.keys(propertyCount),
-
-    datasets: [
-      {
-        label: "Mechanical Property Distribution",
-        data: Object.values(propertyCount),
-        backgroundColor: [
-          "#0ea5e9",
-          "#6366f1",
-          "#22c55e",
-          "#f59e0b",
-          "#ef4444",
-        ],
-      },
-    ],
-  };
-
-  /* =========================
-     HEATMAP DATA
-  ========================= */
-
   const heatmapData = {};
 
   if (analysisResult?.results) {
@@ -198,7 +243,6 @@ const MechanicalAnalysis = () => {
       if (!heatmapData[row.parameter]) {
         heatmapData[row.parameter] = {};
       }
-
       heatmapData[row.parameter][row.property] = row.severity;
     });
   }
@@ -223,9 +267,8 @@ const MechanicalAnalysis = () => {
   };
 
   /* =========================
-     OPTIMAL RANGE
+     RECOMMENDATIONS
   ========================= */
-
   let recommendations = [];
 
   if (analysisResult?.results) {
@@ -235,7 +278,6 @@ const MechanicalAnalysis = () => {
       if (!grouped[row.parameter]) {
         grouped[row.parameter] = [];
       }
-
       grouped[row.parameter].push(row);
     });
 
@@ -252,34 +294,36 @@ const MechanicalAnalysis = () => {
   }
 
   /* =========================
-     PDF REPORT
+     PDF
   ========================= */
-
   const downloadReport = () => {
     const doc = new jsPDF();
 
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.text("Mechanical Property Analysis Report", 20, 20);
 
-    doc.setFontSize(12);
-
-    doc.text("Recommended Parameter Ranges", 20, 40);
-
-    let y = 50;
+    let y = 40;
 
     recommendations.forEach((r) => {
-      doc.text(r.parameter, 20, y);
-      doc.text(r.optimalRange, 120, y);
-
+      doc.text(`${r.parameter} : ${r.optimalRange}`, 20, y);
       y += 7;
-
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
     });
 
-    doc.save("Mechanical_Analysis_Report.pdf");
+    doc.save("Mechanical_Report.pdf");
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: "y",
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+      },
+    },
   };
 
   return (
@@ -290,7 +334,7 @@ const MechanicalAnalysis = () => {
         </h1>
 
         <p className="page-subtitle">
-          Analyze parameters affecting UTS, YS, ELOG, Hardness and RA
+          Analyze selected parameters and properties dynamically
         </p>
       </div>
 
@@ -299,7 +343,7 @@ const MechanicalAnalysis = () => {
 
         <select
           value={selectedDataset}
-          onChange={(e) => setSelectedDataset(e.target.value)}
+          onChange={(e) => handleDatasetChange(e.target.value)}
         >
           <option value="">Choose dataset</option>
 
@@ -315,27 +359,68 @@ const MechanicalAnalysis = () => {
         </button>
       </div>
 
+      {/* INPUT + TARGET (2 COLUMN UI) */}
+      {columns.length > 0 && (
+        <div className="card mt-3">
+          <div className="row">
+            <div className="col">
+              <h3>Select Input Parameters</h3>
+
+              {inputColumns.map((col) => (
+                <label key={col}>
+                  <input
+                    type="checkbox"
+                    checked={selectedInputs.includes(col)}
+                    onChange={() => toggleInput(col)}
+                  />
+                  {col}
+                </label>
+              ))}
+            </div>
+
+            <div className="col">
+              <h3>Select Target Properties</h3>
+
+              {targetColumns.map((col) => (
+                <label key={col}>
+                  <input
+                    type="checkbox"
+                    checked={selectedTargets.includes(col)}
+                    onChange={() => toggleTarget(col)}
+                  />
+                  {col}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {analysisResult?.results?.length > 0 && (
         <div className="row mt-3">
+          {" "}
           <div className="col">
+            {" "}
             <div className="card">
-              <h3>Severity Distribution</h3>
-
+              {" "}
+              <h3>Severity Distribution</h3>{" "}
               <div style={{ height: "350px" }}>
-                <Bar data={severityChartData} />
-              </div>
-            </div>
-          </div>
-
+                {" "}
+                <Bar data={severityChartData} />{" "}
+              </div>{" "}
+            </div>{" "}
+          </div>{" "}
           <div className="col">
+            {" "}
             <div className="card">
-              <h3>Mechanical Property Distribution</h3>
-
+              {" "}
+              <h3>Mechanical Property Distribution</h3>{" "}
               <div style={{ height: "350px" }}>
-                <Bar data={propertyChart} />
-              </div>
-            </div>
-          </div>
+                {" "}
+                <Bar data={propertyChart} />{" "}
+              </div>{" "}
+            </div>{" "}
+          </div>{" "}
         </div>
       )}
 

@@ -12,11 +12,30 @@ const Result = () => {
   const [result, setResult] = useState(null);
   const [modelInfo, setModelInfo] = useState(null);
 
+  // ================= COLOR PALETTE =================
+  const COLORS = [
+    "#2563eb", // blue
+    "#22c55e", // green
+    "#f59e0b", // orange
+    "#ef4444", // red
+    "#8b5cf6", // purple
+    "#06b6d4", // cyan
+  ];
+
   useEffect(() => {
     const data = localStorage.getItem("predictionResult");
-    if (data) setResult(JSON.parse(data));
-    loadModelInfo();
+
+    if (data) {
+      const parsed = JSON.parse(data);
+      setResult(parsed);
+    }
   }, []);
+
+  useEffect(() => {
+    if (result) {
+      loadModelInfo();
+    }
+  }, [result]);
 
   const loadModelInfo = async () => {
     try {
@@ -26,7 +45,7 @@ const Result = () => {
       const matched = res.data.find((t) => t.algorithm === result.modelUsed);
 
       if (matched) setModelInfo(matched);
-    } catch (err){
+    } catch (err) {
       console.log("Error fetching model info:", err);
     }
   };
@@ -39,9 +58,13 @@ const Result = () => {
     );
   }
 
-  const timestamp = new Date(result?.createdAt || new Date().getTime()).toLocaleString();
+  const timestamp = new Date(
+    result?.createdAt || new Date().getTime(),
+  ).toLocaleString();
 
-  const defectEntries = Object.entries(result.prediction_results);
+  const defectEntries = result?.prediction_results
+    ? Object.entries(result.prediction_results)
+    : [];
 
   const overallProbability =
     defectEntries.length > 0
@@ -54,7 +77,7 @@ const Result = () => {
   const highestDefect = defectEntries.reduce(
     (max, current) =>
       Number(current[1]?.probability_percent) >
-Number(max?.[1]?.probability_percent || 0)
+      Number(max?.[1]?.probability_percent || 0)
         ? current
         : max,
     null,
@@ -139,10 +162,12 @@ Number(max?.[1]?.probability_percent || 0)
                   {
                     data: [overallProbability, 100 - overallProbability],
                     backgroundColor: [
-                      getRiskColor(overallProbability),
-                      "#e5e7eb",
+                      "#2563eb", // fixed premium blue for overall
+                      "#d7ef21",
                     ],
-                    borderWidth: 0,
+                    borderWidth: 1,
+                    // borderColor: "black",
+                    // hoverOffset: 12,
                   },
                 ],
               }}
@@ -161,7 +186,8 @@ Number(max?.[1]?.probability_percent || 0)
         </div>
 
         {/* INDIVIDUAL DEFECT CARDS */}
-        {defectEntries.map(([defect, values]) => {
+        {defectEntries.map(([defect, values], index) => {
+          const dynamicColor = COLORS[index % COLORS.length];
           const riskColor = getRiskColor(values.probability_percent);
 
           return (
@@ -177,8 +203,10 @@ Number(max?.[1]?.probability_percent || 0)
                           values.probability_percent,
                           100 - values.probability_percent,
                         ],
-                        backgroundColor: [riskColor, "#e5e7eb"],
-                        borderWidth: 0,
+                        backgroundColor: [dynamicColor, "#d7ef21"],
+                        borderWidth: 1,
+                        // borderColor: "black",
+                        // hoverOffset: 12,
                       },
                     ],
                   }}
@@ -202,9 +230,9 @@ Number(max?.[1]?.probability_percent || 0)
         <h3>AI Explanation</h3>
         <p className="explanation-text">
           The trained neural network evaluated{" "}
-          <strong>{Object.keys(result.inputs || {}).length || 0}</strong> operational
-          input parameters to estimate the likelihood of defect occurrence
-          across all target categories.
+          <strong>{Object.keys(result.inputs || {}).length || 0}</strong>{" "}
+          operational input parameters to estimate the likelihood of defect
+          occurrence across all target categories.
           <br />
           <br />
           The computed <strong>overall defect probability</strong> is{" "}

@@ -6,20 +6,14 @@ import axios from "axios";
 ====================================== */
 export const runDiagnosis = async (req, res) => {
   try {
-    const { datasetId } = req.body;
+    const { datasetId, inputColumns, targetColumns } = req.body;
 
-    /* ===============================
-       VALIDATION
-    =============================== */
     if (!datasetId) {
       return res.status(400).json({
         message: "Dataset ID required",
       });
     }
 
-    /* ===============================
-       FIND DATASET
-    =============================== */
     const dataset = await Dataset.findById(datasetId);
 
     if (!dataset) {
@@ -30,18 +24,12 @@ export const runDiagnosis = async (req, res) => {
 
     const ML_BASE_URL = process.env.ML_SERVICE_URL;
 
-    if (!ML_BASE_URL) {
-      return res.status(500).json({
-        message: "ML service URL not configured in .env",
-      });
-    }
-    /* ===============================
-       CALL PYTHON ML SERVICE
-    =============================== */
     const response = await axios.post(
       `${ML_BASE_URL}/diagnosis`,
       {
         file_path: dataset.filePath,
+        input_columns: inputColumns || [],
+        target_columns: targetColumns || [],
       },
       {
         timeout: 300000,
@@ -51,18 +39,6 @@ export const runDiagnosis = async (req, res) => {
 
     const pythonResult = response.data;
 
-    /* ===============================
-       VALIDATE ML RESPONSE
-    =============================== */
-    if (!pythonResult) {
-      return res.status(500).json({
-        message: "Invalid response from ML service",
-      });
-    }
-
-    /* ===============================
-       STRUCTURED RESPONSE (UPDATED)
-    =============================== */
     return res.json({
       message: "Diagnosis analysis completed",
 
@@ -73,13 +49,9 @@ export const runDiagnosis = async (req, res) => {
       },
 
       summary: pythonResult.dataset_summary,
-
       results: pythonResult.diagnosis_results,
-
       criticalParameters: pythonResult.critical_parameters,
-
       severityMatrix: pythonResult.severity_matrix,
-
       dashboard: pythonResult.dashboard_data,
     });
   } catch (error) {

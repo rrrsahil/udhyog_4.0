@@ -18,6 +18,8 @@ export const startTraining = async (req, res) => {
       epochs,
       learningrate,
       batchsize,
+      inputColumns, // ✅ NEW
+      targetColumns, // ✅ NEW
     } = req.body;
 
     if (!datasetId) {
@@ -40,6 +42,8 @@ export const startTraining = async (req, res) => {
       learningrate,
       status: "running",
       progress: 0,
+      inputColumns,
+      targetColumns,
     });
 
     const pythonPayload = {
@@ -52,6 +56,8 @@ export const startTraining = async (req, res) => {
       algorithm,
       batch_size: batchsize,
       training_id: training._id.toString(),
+      input_columns: inputColumns,
+      target_columns: targetColumns,
     };
 
     const ML_BASE_URL = process.env.ML_SERVICE_URL;
@@ -62,14 +68,10 @@ export const startTraining = async (req, res) => {
       });
     }
 
-    const response = await axios.post(
-      `${ML_BASE_URL}/train`,
-      pythonPayload,
-      {
-        timeout: 600000,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    const response = await axios.post(`${ML_BASE_URL}/train`, pythonPayload, {
+      timeout: 600000,
+      headers: { "Content-Type": "application/json" },
+    });
 
     const result = response.data;
 
@@ -82,9 +84,9 @@ export const startTraining = async (req, res) => {
       recall: result.recall,
       f1_score: result.f1_score,
       confusion_matrix: result.confusion_matrix,
-      defect_probability: result.defect_probability,
       targets: result.targets,
-      weights_bias: result.weights_bias,
+      inputColumns,
+      targetColumns,
     });
 
     return res.json({
@@ -106,6 +108,7 @@ export const startTraining = async (req, res) => {
     });
   }
 };
+
 /* ======================================
    GET TRAINING STATUS
 ====================================== */

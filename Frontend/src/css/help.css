@@ -1,64 +1,171 @@
-/* Help page container */
-.help-page-container{
-  max-width:1200px;
-  margin:auto;
-  padding:30px;
+/* ================= CONTAINER ================= */
+.help-page-container {
+  max-width: 1400px;
+  margin: auto;
+  padding: 30px;
 }
 
-/* Header */
-.help-page-header{
-  margin-bottom:30px;
+/* ================= HEADER ================= */
+.help-page-header {
+  margin-bottom: 30px;
 }
 
-.help-page-title{
-  font-size:2rem;
-  color:var(--primary-dark);
-  margin-bottom:10px;
+.help-page-title {
+  font-size: 2rem;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
 }
 
-.help-page-subtitle{
-  color:var(--text-secondary);
+.help-page-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
 }
 
-/* Cards */
-.help-card{
-  background:var(--white);
-  padding:25px;
-  border-radius:var(--border-radius-lg);
-  box-shadow:var(--shadow);
-  margin-bottom:25px;
+/* ================= CARD ================= */
+.help-card {
+  background: var(--white);
+  padding: 25px;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
 }
 
-.help-card h2{
-  margin-bottom:15px;
-  color:var(--primary-dark);
+/* hover animation */
+.help-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 
-/* Lists */
+.help-card h2 {
+  margin-bottom: 15px;
+  color: var(--primary-dark);
+  font-size: 1.2rem;
+}
+
+/* ================= LIST ================= */
 .help-workflow-list,
 .help-fileformat-list,
-.help-troubleshoot-list{
-  padding-left:20px;
+.help-troubleshoot-list {
+  padding-left: 20px;
 }
 
 .help-workflow-list li,
 .help-fileformat-list li,
-.help-troubleshoot-list li{
-  margin-bottom:8px;
+.help-troubleshoot-list li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+  transition: 0.2s;
 }
 
-/* Responsive */
-@media (max-width:768px){
+/* hover highlight */
+.help-workflow-list li:hover,
+.help-fileformat-list li:hover,
+.help-troubleshoot-list li:hover {
+  color: var(--primary-dark);
+  transform: translateX(3px);
+}
 
-  .help-page-container{
-    padding:15px;
+/* ================= WORKFLOW VISUAL ================= */
+.workflow-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+/* step box */
+.step {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  animation: pulse 2s infinite;
+}
+
+/* delay animation */
+.workflow-visual .step:nth-child(1) { animation-delay: 0s; }
+.workflow-visual .step:nth-child(3) { animation-delay: 0.3s; }
+.workflow-visual .step:nth-child(5) { animation-delay: 0.6s; }
+.workflow-visual .step:nth-child(7) { animation-delay: 0.9s; }
+
+/* arrow */
+.arrow {
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: var(--primary-dark);
+}
+
+/* animation keyframe */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* ================= WARNING BOX ================= */
+.warning-box {
+  margin-top: 15px;
+  padding: 12px;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  border-left: 4px solid #f59e0b;
+}
+
+/* ================= FAQ ================= */
+.help-faq-section p {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+/* ================= ACTION BUTTONS ================= */
+.help-actions {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.help-btn {
+  background: var(--primary-dark);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+/* button hover */
+.help-btn:hover {
+  background: var(--primary-light);
+  transform: scale(1.05);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .help-page-container {
+    padding: 15px;
   }
 
-  .help-page-title{
-    font-size:1.5rem;
+  .help-page-title {
+    font-size: 1.5rem;
   }
 
-  .help-card{
-    padding:18px;
+  .help-card {
+    padding: 18px;
+  }
+
+  .workflow-visual {
+    flex-direction: column;
+  }
+
+  .arrow {
+    transform: rotate(90deg);
   }
 }

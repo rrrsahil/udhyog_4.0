@@ -17,6 +17,7 @@ const Prognosis = () => {
   const [history, setHistory] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
   const [blockchainTxHash, setBlockchainTxHash] = useState("");
+  const [targetColumns, setTargetColumns] = useState([]);
 
   /* LOAD MODEL + DATASET COLUMNS */
   const loadModel = async () => {
@@ -27,17 +28,14 @@ const Prognosis = () => {
 
       setActiveModel(res.data);
 
-      const datasetColumns = res.data?.dataset?.columns;
+      // ✅ USE TRAINING SAVED INPUTS (DYNAMIC)
+      const inputs = res.data?.inputColumns || [];
+      const targets = res.data?.targetColumns || [];
 
-      if (Array.isArray(datasetColumns) && datasetColumns.length >= 7) {
-        const inputColumns = datasetColumns.slice(6);
-
-        setColumns(inputColumns);
-        setSelectedColumns(inputColumns);
-      } else {
-        setColumns([]);
-        setSelectedColumns([]);
-      }
+      // only inputs needed for form
+      setColumns(inputs);
+      setSelectedColumns(inputs);
+      setTargetColumns(targets);
     } catch (err) {
       console.error("Model load error:", err);
       toast.error("No trained model available");
@@ -88,6 +86,14 @@ const Prognosis = () => {
     const form = e.target;
     const inputs = {};
 
+if (!activeModel) {
+  toast.error("No trained model available");
+  return;
+}
+          if (selectedColumns.length === 0) {
+  toast.error("Select at least one parameter");
+  return;
+}
     selectedColumns.forEach((c) => {
       inputs[c] = parseFloat(form[c].value || 0);
     });
@@ -95,7 +101,7 @@ const Prognosis = () => {
     try {
       const res = await API.post("/prognosis/predict", { inputs });
 
-      localStorage.setItem("predictionResult", JSON.stringify(res.data));
+      localStorage.setItem("predictionResult", JSON.stringify(res.data.result));
 
       toast.success("Prediction generated successfully");
 
@@ -188,7 +194,7 @@ const Prognosis = () => {
           <div className="alert-prognosis success show">
             <i className="fas fa-check-circle" />
             {activeModel
-              ? `Active Model: ${activeModel.algorithm} | Accuracy: ${activeModel.accuracy}%`
+              ? `Active Model: ${activeModel.algorithm} | Inputs: ${columns.length} | Targets: ${targetColumns.length} | Accuracy: ${activeModel.accuracy}%`
               : "No trained model available"}
           </div>
 
@@ -256,7 +262,7 @@ const Prognosis = () => {
                 gap: "10px",
               }}
             >
-              {Array.isArray(columns) &&
+              {columns?.length > 0 &&
                 columns.map((col) => (
                   <label
                     key={col}
@@ -287,7 +293,7 @@ const Prognosis = () => {
                       className="parameter-input"
                       name={col}
                       placeholder={`Enter ${col}`}
-                      step="0.0001"
+                      step="any"
                       required
                     />
                   </div>
@@ -338,9 +344,7 @@ const Prognosis = () => {
                           ([key, value]) => (
                             <div key={key}>
                               <strong>{key}:</strong>{" "}
-                              {value?.prediction === 1
-                                ? "Defective"
-                                : "Non-Defective"}
+                              {value?.prediction ?? value?.predicted_value ?? "N/A"}
                             </div>
                           ),
                         )}
@@ -351,7 +355,7 @@ const Prognosis = () => {
                         Object.entries(item.prediction_results).map(
                           ([key, value]) => (
                             <div key={key}>
-                              {key}: {value?.probability_percent ?? 0}%
+                              {key}: {value?.probability_percent ?? value?.predicted_value ?? 0}%
                             </div>
                           ),
                         )}
@@ -365,7 +369,7 @@ const Prognosis = () => {
                               key={key}
                               style={{
                                 color:
-                                  value?.risk_level === "High"
+                                  value?.risk_level || value?.range_level || "N/A" === "High"
                                     ? "red"
                                     : value?.risk_level === "Medium"
                                       ? "orange"

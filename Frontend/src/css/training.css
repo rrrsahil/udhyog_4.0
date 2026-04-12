@@ -8,7 +8,7 @@
    Training Layout
    ============================================ */
 .training-container {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: var(--spacing-lg);
 }

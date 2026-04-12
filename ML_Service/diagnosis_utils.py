@@ -187,14 +187,16 @@ def build_dashboard_data(results):
 
 
 # ================= MAIN DIAGNOSIS FUNCTION =================
-def run_diagnosis(file_path):
+def run_diagnosis(file_path, input_columns=None, target_columns=None):
 
     df = load_dataset(file_path)
 
-    # Dataset structure
-    heat_column = df.columns[0]
-    target_columns = df.columns[1:6]
-    input_columns = df.columns[6:]
+    # ================= DEFAULT FALLBACK =================
+    if input_columns is None or len(input_columns) == 0:
+        input_columns = df.columns[6:]
+
+    if target_columns is None or len(target_columns) == 0:
+        target_columns = df.columns[1:6]
 
     # Ensure numeric inputs
     df[input_columns] = df[input_columns].apply(
@@ -245,19 +247,13 @@ def run_diagnosis(file_path):
 
                 results.append(result)
 
-    # ================= CRITICAL PARAMETERS =================
     critical_parameters = [
         r for r in results
         if r["posterior_probability"] > 0.5
     ]
 
-    # ================= SEVERITY MATRIX =================
     severity_matrix = build_severity_matrix(results)
-
-    # ================= DASHBOARD =================
     dashboard_data = build_dashboard_data(results)
-
-    logging.info(f"Diagnosis completed with {len(results)} results")
 
     return {
         "dataset_summary": dataset_summary,

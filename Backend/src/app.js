@@ -6,6 +6,7 @@ import trainingRoutes from "./routes/training.routes.js";
 import prognosisRoutes from "./routes/prognosis.routes.js";
 import analysisRoutes from "./routes/analysis.routes.js";
 import mechanicalRoutes from "./routes/mechanical.routes.js";
+import propertyRoutes from "./routes/property.routes.js";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/api/training", trainingRoutes);
 app.use("/api/prognosis", prognosisRoutes);
 app.use("/api/analysis", analysisRoutes);
 app.use("/api/mechanical", mechanicalRoutes);
+app.use("/api/property", propertyRoutes);
 
 app.get("/", (req, res) => {
   res.send("QPS Backend Running...");

@@ -3,18 +3,20 @@ import Training from "../models/training.model.js";
 import axios from "axios";
 
 /* ======================================
-   REAL PREDICT QUALITY
+   PREDICT DEFECT (QUALITY PROGNOSIS)
 ====================================== */
 export const predictQuality = async (req, res) => {
   try {
     const { inputs } = req.body;
 
+    // ================= VALIDATION =================
     if (!inputs || typeof inputs !== "object") {
       return res.status(400).json({
         message: "Valid input data required",
       });
     }
 
+    // ================= FETCH LATEST TRAINED MODEL =================
     const latestModel = await Training.findOne({ status: "completed" })
       .populate("dataset")
       .sort({ createdAt: -1 });
@@ -25,44 +27,67 @@ export const predictQuality = async (req, res) => {
       });
     }
 
-    // ✅ ADD THIS (same pattern everywhere)
+    // ================= ML SERVICE CONFIG =================
     const ML_BASE_URL = process.env.ML_SERVICE_URL;
 
-    // ✅ ADD THIS CHECK
     if (!ML_BASE_URL) {
       return res.status(500).json({
         message: "ML service URL not configured in .env",
       });
     }
 
-    const response = await axios.post(
+    // ================= CALL ML SERVICE =================
+    const mlResponse = await axios.post(
       `${ML_BASE_URL}/predict`,
-      { sample: inputs },
+      {
+        sample: inputs,
+      },
       {
         timeout: 30000,
         headers: { "Content-Type": "application/json" },
       },
     );
 
-    const pythonResult = response.data;
+    const pythonResult = mlResponse.data;
 
-    if (!pythonResult.prediction_results) {
+    // ================= VALIDATE ML RESPONSE =================
+    if (!pythonResult || !pythonResult.prediction_results) {
       return res.status(500).json({
         message: "Invalid response from ML service",
       });
     }
 
+    // ================= SAVE RESULT =================
     const savedResult = await Prognosis.create({
       inputs,
       prediction_results: pythonResult.prediction_results,
+
+      // MODEL DETAILS
       modelUsed: latestModel.algorithm,
+      inputColumns: latestModel.inputColumns || [],
+      targetColumns: latestModel.targetColumns || [],
+
+      // 🔥 IMPORTANT FOR UI
+      type: "defect",
+
+      // OPTIONAL FUTURE DATA
+      metadata: {
+        datasetId: latestModel.dataset?._id || null,
+        trainedAt: latestModel.updatedAt || null,
+      },
     });
 
-    return res.json(savedResult);
+    // ================= RESPONSE =================
+    return res.status(200).json({
+      success: true,
+      message: "Prediction successful",
+      result: savedResult,
+    });
   } catch (error) {
-    console.error("Prediction Error:", error.message);
+    console.error("Prediction Error:", error);
 
     return res.status(500).json({
+      success: false,
       message: "Prediction failed",
       error: error.response?.data || error.message,
     });
@@ -76,20 +101,48 @@ export const getPrognosisHistory = async (req, res) => {
   try {
     const history = await Prognosis.find().sort({ createdAt: -1 }).limit(20);
 
-    return res.json(history);
+    return res.status(200).json(history);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };
 
 /* ======================================
-   COUNT PREDICTIONS
+   GET SINGLE PREDICTION (DETAIL VIEW)
+====================================== */
+export const getSinglePrediction = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await Prognosis.findById(id);
+
+    if (!result) {
+      return res.status(404).json({
+        message: "Prediction not found",
+      });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+/* ======================================
+   COUNT TOTAL PREDICTIONS
 ====================================== */
 export const countPredictions = async (req, res) => {
   try {
     const count = await Prognosis.countDocuments();
-    return res.json({ count });
+
+    return res.status(200).json({ count });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };

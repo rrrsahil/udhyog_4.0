@@ -201,23 +201,29 @@ def build_dashboard_data(results):
 # ======================================
 # MAIN MECHANICAL ANALYSIS
 # ======================================
-def run_mechanical_analysis(file_path):
+def run_mechanical_analysis(file_path, input_columns=None, target_columns=None):
 
     df = load_dataset(file_path)
 
     heat_column = df.columns[0]
 
-    # Mechanical Properties (Targets)
-    targets = ["UTS", "YS", "ELOG", "Hardness", "RA"]
+    # =========================
+    # DEFAULT FALLBACK (Backward compatibility)
+    # =========================
+    default_targets = ["UTS", "YS", "ELOG", "Hardness", "RA"]
 
-    # Detect available targets
-    targets = [t for t in targets if t in df.columns]
+    if not target_columns or len(target_columns) == 0:
+        target_columns = [t for t in default_targets if t in df.columns]
 
-    # Input Parameters
-    input_columns = [c for c in df.columns if c not in targets and c != heat_column]
+    if not input_columns or len(input_columns) == 0:
+        input_columns = [c for c in df.columns if c not in target_columns and c != heat_column]
 
     # Ensure numeric inputs
     df[input_columns] = df[input_columns].apply(
+        pd.to_numeric, errors="coerce"
+    ).fillna(0)
+
+    df[target_columns] = df[target_columns].apply(
         pd.to_numeric, errors="coerce"
     ).fillna(0)
 
@@ -233,7 +239,7 @@ def run_mechanical_analysis(file_path):
 
             prior_odds = compute_prior_odds(lp)
 
-            for target in targets:
+            for target in target_columns:
 
                 target_ranges = compute_ranges(df[target])
 
@@ -255,7 +261,6 @@ def run_mechanical_analysis(file_path):
                     posterior = compute_posterior_probability(post_odds)
 
                     result = {
-
                         "parameter": param,
                         "range": f"{round(r[0],4)} - {round(r[1],4)}",
                         "property": target,
@@ -267,37 +272,22 @@ def run_mechanical_analysis(file_path):
                         "posterior_odds": round(post_odds,4),
                         "posterior_probability": round(posterior,4),
                         "severity": severity_level(posterior)
-
                     }
 
                     results.append(result)
 
-    # ======================================
-    # CRITICAL PARAMETERS
-    # ======================================
     critical_parameters = [
         r for r in results
         if r["posterior_probability"] > 0.5
     ]
 
-    # ======================================
-    # SEVERITY MATRIX
-    # ======================================
     severity_matrix = build_severity_matrix(results)
 
-    # ======================================
-    # DASHBOARD DATA
-    # ======================================
     dashboard_data = build_dashboard_data(results)
 
     return {
-
         "mechanical_results": results,
-
         "critical_parameters": critical_parameters,
-
         "parameter_severity_matrix": severity_matrix,
-
         "dashboard_data": dashboard_data
-
     }

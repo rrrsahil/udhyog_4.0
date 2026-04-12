@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import { getContract, getCurrentAccount, getEtherscanUrl } from "../utils/web3";
 
 const Training = () => {
-
   /* STATES */
   const [datasets, setDatasets] = useState([]);
   const [, setSelectedDataset] = useState(null);
@@ -19,6 +18,13 @@ const Training = () => {
   const [epochs, setEpochs] = useState(50);
   const [blockchainTxHash, setBlockchainTxHash] = useState("");
   const [currentTrainingId, setCurrentTrainingId] = useState(null);
+
+  // ================= NEW STATES =================
+  const [inputColumns, setInputColumns] = useState([]);
+  const [targetColumns, setTargetColumns] = useState([]);
+
+  const [selectedInputs, setSelectedInputs] = useState([]);
+  const [selectedTargets, setSelectedTargets] = useState([]);
 
   /* LOAD DATASETS */
   useEffect(() => {
@@ -200,10 +206,22 @@ const Training = () => {
   }, [currentTrainingId, recordTrainingOnBlockchain]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // ✅ always first
+
+    // ================= VALIDATION =================
+    if (selectedInputs.length === 0) {
+      toast.error("Select at least one input parameter");
+      return;
+    }
+
+    if (selectedTargets.length === 0) {
+      toast.error("Select at least one target defect");
+      return;
+    }
 
     const form = e.target;
 
+    // ================= PAYLOAD =================
     const data = {
       algorithm: form.algorithm.value,
       datasetId: form.dataset.value,
@@ -213,6 +231,10 @@ const Training = () => {
       epochs: Number(epochs),
       learningrate: Number(form.learningrate.value),
       batchsize: Number(form.batchsize.value),
+
+      // ================= NEW =================
+      inputColumns: selectedInputs,
+      targetColumns: selectedTargets,
     };
 
     try {
@@ -228,8 +250,9 @@ const Training = () => {
       setTrainingAccuracy("");
       setTrainingProgress(0);
 
-      toast.success("Training complete successfully");
+      toast.success("Training started successfully");
     } catch (error) {
+      console.error("Training error:", error);
       toast.error(error.response?.data?.message || "Training failed");
     }
   };
@@ -322,11 +345,19 @@ const Training = () => {
                 <div className="form-group-training">
                   <label htmlFor="algorithm">Training Algorithm</label>
                   <select id="algorithm" name="algorithm" required>
-                    <option value="Back Propagation">Back Propagation (SGD) </option>
-                    <option value="Momentum & Adaptive Learning">Momentum & Adaptive Learning (SGD + Momentum) </option>
+                    <option value="Back Propagation">
+                      Back Propagation (SGD){" "}
+                    </option>
+                    <option value="Momentum & Adaptive Learning">
+                      Momentum & Adaptive Learning (SGD + Momentum){" "}
+                    </option>
                     <option value="Adam">Adam Optimizer</option>
-                    <option value="Bayesian Regularization">Bayesian Regularization (L2)</option>
-                    <option value="Quasi-Newton (L-BFGS)">Quasi-Newton (L-BFGS)</option>
+                    <option value="Bayesian Regularization">
+                      Bayesian Regularization (L2)
+                    </option>
+                    <option value="Quasi-Newton (L-BFGS)">
+                      Quasi-Newton (L-BFGS)
+                    </option>
                   </select>
                 </div>
 
@@ -342,12 +373,18 @@ const Training = () => {
 
                       setSelectedDataset(ds);
 
-                      // Sir format: Heat(0) + Targets(1-5) + Inputs(6+)
-                      const inputColumns = ds.columns
-                        ? ds.columns.slice(6)
-                        : [];
+                      // ================= DYNAMIC SPLIT =================
+                      const targets = ds.columns ? ds.columns.slice(1, 6) : [];
+                      const inputs = ds.columns ? ds.columns.slice(6) : [];
 
-                      const inputCount = inputColumns.length;
+                      setInputColumns(inputs);
+                      setTargetColumns(targets);
+
+                      // default select all
+                      setSelectedInputs(inputs);
+                      setSelectedTargets(targets);
+
+                      const inputCount = inputs.length;
 
                       if (inputCount === 0) {
                         setNeuronOptions([2, 4, 8]);
@@ -389,6 +426,98 @@ const Training = () => {
                     ))}
                   </select>
                 </div>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h3 className="form-section-title">
+                <i className="fas fa-list" /> Select Input Parameters
+              </h3>
+
+              <div className="flex-between mb-2">
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => setSelectedInputs(inputColumns)}
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    style={{ marginLeft: "10px" }}
+                    onClick={() => setSelectedInputs([])}
+                  >
+                    Unselect All
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-row-two-col">
+                {inputColumns.map((col) => (
+                  <label key={col}>
+                    <input
+                      type="checkbox"
+                      checked={selectedInputs.includes(col)}
+                      onChange={() => {
+                        setSelectedInputs((prev) =>
+                          prev.includes(col)
+                            ? prev.filter((c) => c !== col)
+                            : [...prev, col],
+                        );
+                      }}
+                    />
+                    {col}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h3 className="form-section-title">
+                <i className="fas fa-bug" /> Select Target Defects
+              </h3>
+
+              <div className="flex-between mb-2">
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => setSelectedTargets(targetColumns)}
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    style={{ marginLeft: "10px" }}
+                    onClick={() => setSelectedTargets([])}
+                  >
+                    Unselect All
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-row-two-col">
+                {targetColumns.map((col) => (
+                  <label key={col}>
+                    <input
+                      type="checkbox"
+                      checked={selectedTargets.includes(col)}
+                      onChange={() => {
+                        setSelectedTargets((prev) =>
+                          prev.includes(col)
+                            ? prev.filter((c) => c !== col)
+                            : [...prev, col],
+                        );
+                      }}
+                    />
+                    {col}
+                  </label>
+                ))}
               </div>
             </div>
 

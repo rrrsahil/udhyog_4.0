@@ -1,5 +1,5 @@
 .result-container {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: auto;
   padding: 30px 20px;
 }
@@ -192,6 +192,12 @@
 
 .defect-card {
   text-align: center;
+  transition: all 0.3s ease;
+}
+
+.defect-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.1);
 }
 
 @media (max-width: 992px) {
@@ -204,4 +210,27 @@
   .defect-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.defect-card h3 {
+  font-size: 1rem;
+  color: var(--primary-blue);
+}
+
+.result-status h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.result-status h3 {
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.gauge-wrapper canvas {
+  transition: transform 0.3s ease;
+}
+
+.defect-card:hover canvas {
+  transform: scale(1.05);
 }
