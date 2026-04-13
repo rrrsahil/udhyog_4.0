@@ -52,40 +52,44 @@ It combines neural networks, Bayesian reasoning, and SHAP-based explainability.
 
 ```mermaid
 graph TD
-    subgraph Frontend [React (Vite)]
-        UI[Dashboard UI]
-        Axios[HTTP Layer]
+
+    subgraph Frontend["Frontend - React + Vite"]
+        UI["Dashboard UI"]
+        Axios["HTTP Layer"]
     end
 
-    subgraph Backend [Node.js / Express]
-        Express[Middleware Layer]
-        Auth[Auth Controller]
-        Broker[ML Proxy Controller]
+    subgraph Backend["Backend - Node.js + Express"]
+        Express["Middleware Layer"]
+        Auth["Auth Controller"]
+        Broker["ML Proxy Controller"]
     end
 
-    subgraph ML [Python FastAPI]
-        API[FastAPI Server]
-        TF[TensorFlow Models]
-        SK[Scikit Models]
-        Bayes[Bayesian Logic]
-        SHAP[Explainability]
+    subgraph ML["ML Service - Python FastAPI"]
+        API["FastAPI Server"]
+        TF["TensorFlow Models"]
+        SK["Scikit-learn Models"]
+        Bayes["Bayesian Logic"]
+        SHAP["Explainability"]
     end
 
-    subgraph DB [Storage]
-        Mongo[(MongoDB)]
-        Files[(Model Files)]
-        Cloud[Cloudinary]
+    subgraph DB["Storage Layer"]
+        Mongo[("MongoDB")]
+        Files[("Model Files")]
+        Cloud[("Cloudinary")]
     end
 
-    UI <--> Axios
-    Axios <--> Express
+    UI --> Axios
+    Axios --> Express
     Express --> Auth
-    Auth <--> Mongo
-    Express <--> Broker
-    Broker <--> API
+    Auth --> Mongo
+
+    Express --> Broker
+    Broker --> API
+
     API --> TF
     API --> Bayes
     API --> SK
+
     TF --> Files
     SK --> Files
 ```
