@@ -33,7 +33,7 @@
 .im-overlay{
   position:absolute;
   inset:0;
-  background:rgba(0,0,0,0.45);
+  /* background:rgba(0,0,0,0.45); */
 }
 
 /* content */
@@ -53,21 +53,21 @@
 .im-card-content p{
   font-size:22px;
   letter-spacing:1px;
-  color: white;
+  color: rgb(255, 255, 255);
 }
 
 /* background images */
 .im-module-a{
-  background:url("module-A.png") center/cover no-repeat;
+  background:url("DefectPrediction.png") center/cover no-repeat;
 }
 .im-module-b{
-  background:url("module-B.png") center/cover no-repeat;
+  background:url("PropertyPrognosis.png") center/cover no-repeat;
 }
 .im-module-c{
-  background:url("module-C.png") center/cover no-repeat;
+  background:url("DefectDiagnosis.png") center/cover no-repeat;
 }
 .im-module-d{
-  background:url("module-D.png") center/cover no-repeat;
+  background:url("MechanicalDiagnosis.png") center/cover no-repeat;
 }
 
 /* ================= MOBILE ================= */
